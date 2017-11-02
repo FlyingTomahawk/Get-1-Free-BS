@@ -1,0 +1,138 @@
+I designed these modifications to assist my customers with the Free item in cart, not Free without qualifying purchase.
+This will add a note in the shopping cart noting item is free with qualifying purchase, but note is removed is qualifying item is removed from cart. This also formats a the message in product info screen with link to free product.
+
+This is provided without warranty blah, blah, blah
+
+Use at own risk ...
+
+1) Backup your files
+
+----------------------------------------------------------------------------------------
+
+2) in catalog/includes/classes/shopping_cart.php
+
+find:
+          if (tep_db_num_rows($specials_query)) {
+            $specials = tep_db_fetch_array($specials_query);
+            $products_price = $specials['specials_new_products_price'];
+          }
+ 	  $products_array[] = array('id' => $products_id,
+                                    'name' => $products['products_name'],
+                                    'model' => $products['products_model'],
+
+replace with:
+          if (tep_db_num_rows($specials_query)) {
+            $specials = tep_db_fetch_array($specials_query);
+            $products_price = $specials['specials_new_products_price'];
+          }
+ 	  $products_array[] = array('id' => $products_id,
+                                    'name' => $products['products_name'],
+                                    'qproduct' => '', // added for Get 1 Free mod
+                                    'model' => $products['products_model'],
+
+Next find:
+              if (is_array ($free_product = $this->get1free ($products_id))) {
+                // Add the free product to the shopping cart (Customer cannot alter this)
+                $products_array[] = array('id' => $free_product['id'],
+                                          'name' => $free_product['name'],
+                                          'model' => $free_product['model'],
+
+replace with:
+              if (is_array ($free_product = $this->get1free ($products_id))) {
+                // Add the free product to the shopping cart (Customer cannot alter this)
+                $products_array[] = array('id' => $free_product['id'],
+                                          'name' => $free_product['name'],
+					  'qproduct' => '<br><span class="stockWarning">Free with <b>' . $products['products_name'] . '</b> purchase</span>', // added for Get 1 Free mod
+                                          'model' => $free_product['model'],
+
+Save & upload file
+
+----------------------------------------------------------------------------------------
+
+3) in catalog/shopping_cart.php
+
+find:
+
+      $products_name = '<table border="0" cellspacing="2" cellpadding="2">' .
+                       '  <tr>' .
+                       '    <td class="productListing-data" align="center"><a href="' . tep_href_link(FILENAME_PRODUCT_INFO, 'products_id=' . $products[$i]['id']) . '">' . tep_image(DIR_WS_IMAGES . $products[$i]['image'], $products[$i]['name'], SMALL_IMAGE_WIDTH, SMALL_IMAGE_HEIGHT) . '</a></td>' .
+                       '    <td class="productListing-data" valign="top"><a href="' . tep_href_link(FILENAME_PRODUCT_INFO, 'products_id=' . $products[$i]['id']) . '"><b>' . $products[$i]['name'] . '</b></a>' . '';
+
+
+replace with:
+
+      $products_name = '<table border="0" cellspacing="2" cellpadding="2">' .
+                       '  <tr>' .
+                       '    <td class="productListing-data" align="center"><a href="' . tep_href_link(FILENAME_PRODUCT_INFO, 'products_id=' . $products[$i]['id']) . '">' . tep_image(DIR_WS_IMAGES . $products[$i]['image'], $products[$i]['name'], SMALL_IMAGE_WIDTH, SMALL_IMAGE_HEIGHT) . '</a></td>' .
+                       '    <td class="productListing-data" valign="top"><a href="' . tep_href_link(FILENAME_PRODUCT_INFO, 'products_id=' . $products[$i]['id']) . '"><b>' . $products[$i]['name'] . '</b></a>' . $products[$i]['qproduct'] . ''; //' added qproduct for Get 1 Free mod
+
+
+Save & upload file
+
+----------------------------------------------------------------------------------------
+
+4) in catalog/product_info.php
+
+find:
+   // If this product qualifies for free product(s) display promotional text
+    $get_1_free_query = tep_db_query("select pd.products_name,
+                                             g1f.products_free_quantity,
+                                             g1f.products_qualify_quantity
+                                      from " . TABLE_GET_1_FREE . " g1f,
+                                           " . TABLE_PRODUCTS_DESCRIPTION . " pd
+                                      where g1f.products_id = '" . (int)$product_info['products_id'] . "'
+                                        and pd.products_id = g1f. products_free_id
+                                        and pd.language_id = '" . (int)$languages_id . "'
+                                        and status = '1'"
+                                    );
+    if (tep_db_num_rows($get_1_free_query) > 0) {
+      $free_product = tep_db_fetch_array($get_1_free_query);
+      echo '<p>' . sprintf (TEXT_GET_1_FREE_PROMOTION, $free_product['products_qualify_quantity'], $product_info['products_name'], $free_product['products_free_quantity'], $free_product['products_name']) . '</p>';
+    }
+
+replace with:
+
+      // If this product qualifies for free product(s) display promotional text
+      $get_1_free_query = tep_db_query("select pd.products_name,
+                                        pd.products_id, // added for Get 1 Free mod
+					g1f.products_free_quantity,
+                                        g1f.products_qualify_quantity
+                                        from " . TABLE_GET_1_FREE . " g1f,
+                                        " . TABLE_PRODUCTS_DESCRIPTION . " pd
+                                        where g1f.products_id = '" . (int)$product_info['products_id'] . "'
+                                        and pd.products_id = g1f. products_free_id
+                                        and pd.language_id = '" . (int)$languages_id . "'
+                                        and status = '1'"
+                                        );
+      if (tep_db_num_rows($get_1_free_query) > 0) {
+        $free_product = tep_db_fetch_array($get_1_free_query);
+        echo sprintf (TEXT_GET_1_FREE_PROMOTION, $free_product['products_qualify_quantity'], $product_info['products_name'], $free_product['products_free_quantity'], $free_product['products_id'], $free_product['products_name']) . '<p>&nbsp;</p>'; // edited for Get 1 Free mod
+      }
+
+Save & upload file
+
+----------------------------------------------------------------------------------------
+
+5) in catalog/includes/languages/english/product_info.php
+
+find:
+
+  // Get 1 Free
+  define('TEXT_GET_1_FREE_PROMOTION', '<b>Special limited offer: Buy %u %s and get %u %s free!</b>');
+
+replace with:
+
+  // Get 1 Free
+  define('TEXT_GET_1_FREE_PROMOTION', '<div id="get_1_free" style="float:left; background-color:#FFFF99; border-width:1px; border-color:#660000; border-style:solid; padding-bottom:6px; padding-left:10px; padding-right:10px; padding-top:6px;"><span class="dmselected">Special limited time offer:</span><br><b>Buy %u</b> %s <b>&amp; get %u</b><a href="' . tep_href_link(FILENAME_PRODUCT_INFO, 'products_id=%s') .  '"> %s </a><b>free!</b></div>');
+
+Save & upload file
+
+----------------------------------------------------------------------------------------
+
+That's it.
+
+This will place a box on your product info page where a Get 1 Free special is available and will put the note in the shopping cart when an item is a get 1 Free item.
+
+Hope it works for you too,
+
+Ed

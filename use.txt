@@ -1,0 +1,115 @@
+==============================================================
+  Get 1 Free v 1.6BS for 2.3.4 BS GOLD 2015/02/02 Tsimi
+
+  osCommerce, Open Source E-Commerce Solutions
+  http://www.oscommerce.com
+
+  Copyright (c) 2015 osCommerce
+
+  Released under the GNU General Public License
+    For the terms of this license please see
+    the file gpl.txt included in this distribution
+==============================================================
+
+
+
+============
+Admin Setup:
+============
+
+Open your Admin panel, click on "Catalog", then click on "Get 1 Free" in the box
+on the left. This is your admin page for this Addon.
+
+To add a new product to promote, click on the "New Product" button. On the next
+screen, select the product that you want to promote from the "Product" dropdown.
+Enter the quantity of products that the customer must buy to qualify for one
+(or more) free product(s) in the "Quantity to Qualify" box. Enter the maximum
+number of free products per order in the "Maximum Free Products" box. If you
+don't want to limit then enter a very large number. Select the free product from
+the "Free Product" dropdown. Enter the number of free products that you want to
+give for each quantity of qualifying products in the Free Product Quantity box.
+Enter the date you want the promotion to expire in the "Expiry Date" box, or use
+the calendar to select a date. If you don't want the promotion to expire,
+you can leave this field blank. Click the "Insert" button when you are done, or
+"Cancel" to start over.
+
+To edit a product that you have previously entered, click on the product name to
+select it, then click on the "Edit" button. The fields are the same as in the
+new product section, except that the product being promoted cannot be changed.
+
+To delete a product that you have previously entered, click on the product name
+to select it, then click on the "Delete" button, then click on the "Delete"
+button again to confirm.
+
+You can also temporarily disable a promotion by clicking on the red button in
+the product row. Click on the green button to enable a previously disabled
+product.
+
+
+
+================
+Bestseller List:
+================
+
+This Addon adds free products to your Bestseller list every time a customer
+qualifies for one. If you don't want this behaviour, find the following lines in
+catalog/checkout_process.php:
+
+---------------------------------------------------------------------------------------
+      //   Comment out the next line if you don't want free products in the bestseller list
+      tep_db_query("update " . TABLE_PRODUCTS . " set products_ordered = products_ordered + " . sprintf('%d', $free_product['quantity']) . " where products_id = '" . tep_get_prid($free_product['id']) . "'");
+---------------------------------------------------------------------------------------
+
+
+and comment out the second line of that:
+
+---------------------------------------------------------------------------------------
+      //   Comment out the next line if you don't want free products in the bestseller list
+//      tep_db_query("update " . TABLE_PRODUCTS . " set products_ordered = products_ordered + " . sprintf('%d', $free_product['quantity']) . " where products_id = '" . tep_get_prid($free_product['id']) . "'");
+---------------------------------------------------------------------------------------
+
+
+
+==============
+Catalog Setup:
+==============
+
+The code added to catalog/product_info.php and
+catalog/includes/languages/english/product_info.php produces a line like this:
+
+Special Limited Offer: Buy 1 Samsung Galaxy Tab and get 1 Beloved free! - Limited time offer ends Saturday 28 February, 2015
+
+This text will display for any product that currently qualifies under your
+promotion. You can leave it as is (in which case you can stop reading this section) or
+you can change the text to say anything you want by changing the code in
+catalog/includes/languages/english/product_info.php. The code looks like this:
+
+define('TEXT_GET_1_FREE_PROMOTION', '<strong>Special Limited Offer:</strong> Buy %u %s and get %u %s free!');
+define('TEXT_OFFER_ENDS', ' - Limited time offer ends');
+
+The special characters in the above (%u, %s) get replaced with the variables
+in line 133 of catalog/product_info.php. They are substituted in order, so the
+first %u becomes the number of products needed to qualify, the following %s
+becomes the name of the product, etc. If yo need to change the order of the
+variables in the code, you will need to change the order in both files. I used
+%u for the numbers and %s for the text, but %s will work well enough for either.
+
+See the "Get 1 Free Mods.txt" file for further improvements to this text.
+
+==============================
+Hyperlink in product_info.php:
+==============================
+
+The free product name inside the Special Offer message is a hyperlink and will open a new window to it when clicked.
+If you want to redirect to the free product in the same, currently opened window remove the target="_blank" code from the code below
+inside the product_info.php
+
+echo '<p class="alert alert-success">' . sprintf (TEXT_GET_1_FREE_PROMOTION, $free_product['products_qualify_quantity'], $product_info['products_name'], $free_product['products_free_quantity'],  '<a href="' . tep_href_link(FILENAME_PRODUCT_INFO, 'products_id=' . $free_product['products_free_id']). '" target="_blank">' . $free_product['products_name'] . '</a>');
+
+
+========
+Support:
+========
+
+Please post any questions on the Addons Support Forum.
+http://forums.oscommerce.com/topic/255288-get-1-free/

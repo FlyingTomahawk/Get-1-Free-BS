@@ -1,0 +1,447 @@
+==============================================================
+  Get 1 Free BS v1.7 for osC BS Edge aka. osC CE 
+
+  osCommerce, Open Source E-Commerce Solutions
+  http://www.oscommerce.com
+
+  Copyright (c) 2017 osCommerce
+
+  Released under the GNU General Public License
+    For the terms of this license please see
+    the file gpl.txt included in this distribution
+==============================================================
+
+
+
+===========
+Text Files:
+===========
+
+The following text files are included with this package:
+
+  readme.txt   (introduction)
+  install.txt   (installation instructions)
+  use.txt   (instructions for using this Contribution)
+  Get 1 Free Mods.txt  (instructions for improving messages to the customer)
+  gpl.txt   (your license)
+
+
+
+==========
+New Files:
+==========
+
+The following code files are new with this package:
+
+  catalog/admin/get_1_free.php
+  catalog/admin/includes/languages/english/get_1_free.php
+  catalog/admin/includes/boxes/get_1_free.php
+  catalog/admin/includes/languages/english/modules/boxes/get_1_free.php
+  catalog/includes/modules/content/get_1_free/cm_pi_get_1_free.php
+  catalog/includes/languages/english/modules/content/get_1_free/cm_pi_get_1_free.php 
+  catalog/includes/functions/get_1_free.php
+  
+	
+===============
+Modified Files:
+===============
+
+The following files have been modified:
+
+  catalog/admin/includes/functions/general.php
+  catalog/checkout_process.php
+  catalog/product_info.php
+  catalog/shopping_cart.php
+  catalog/includes/application_top.php
+  catalog/includes/classes/shopping_cart.php
+  
+
+=============
+Installation:
+=============
+
+Copy all of the files listed under New Files above to the appropriate directory
+in your osCommerce installation. These instructions assume that your osCommerce
+is installed in the default Catalog directory, and that the admin is in
+catalog/admin. If these have been moved to different locations in your
+installation, adjust these instructions to suit your installation.
+
+INSTALL REQUIRED MODULE
+
+Access your admin area, install and setup the "Get 1 Free" content module. (Modules -> Content)
+
+=========
+Database:
+=========
+
+No manual changes here. The new table will be installed automatically with the content module.
+
+
+=============
+Modify Files:
+=============
+
+Follow the instructions here to modify those files for this Addon. 
+
+=====================
+ADMIN CHANGES
+=====================
+*********************************************
+Open catalog/admin/includes/functions/general.php
+and find the following code:
+*********************************************
+
+---------------------------------------------------------------------------------------
+ $products_query = tep_db_query("select p.products_id, pd.products_name, p.products_price from " . TABLE_PRODUCTS . " p, " . TABLE_PRODUCTS_DESCRIPTION . " pd where p.products_id = pd.products_id and pd.language_id = '" . (int)$languages_id . "' order by products_name");
+---------------------------------------------------------------------------------------
+
+and replace it with:
+
+---------------------------------------------------------------------------------------
+// start Get 1 Free
+  //$products_query = tep_db_query("select p.products_id, pd.products_name, p.products_price from " . TABLE_PRODUCTS . " p, " . TABLE_PRODUCTS_DESCRIPTION . " pd where p.products_id = pd.products_id and pd.language_id = '" . (int)$languages_id . "' order by products_name");
+    $products_query = tep_db_query("select p.products_id, pd.products_name, p.products_price from products p, products_description pd where p.products_id = pd.products_id and pd.language_id = '" . (int)$languages_id . "' and p.products_status = '1' order by products_name");
+// end Get 1 Free
+---------------------------------------------------------------------------------------
+
+=====================
+CATALOG CHANGES
+=====================
+*********************************************
+Open catalog/product_info.php
+Add the following code where you want to show the Get 1 Free message.
+*********************************************
+
+----------------------------------------------------------------------------------------
+
+<div class="row">
+  <?php echo $oscTemplate->getContent('get_1_free'); ?>
+</div>
+
+-----------------------------------------------------------------------------------------
+
+*********************************************
+Open catalog/checkout_process.php 
+and find the following code:
+*********************************************
+
+---------------------------------------------------------------------------------------
+//------insert customer choosen option eof ----
+
+    $products_ordered .= $order->products[$i]['qty'] . ' x ' . $order->products[$i]['name'] . ' (' . $order->products[$i]['model'] . ') = ' . $currencies->display_price($order->products[$i]['final_price'], $order->products[$i]['tax'], $order->products[$i]['qty']) . $products_ordered_attributes . "\n";
+---------------------------------------------------------------------------------------
+
+and add this just after it:
+
+---------------------------------------------------------------------------------------
+// start Get 1 free
+    // If this product qualifies for free product(s) add the free products
+    if (is_array ($free_product = $cart->get1free ($products_id))) {
+      // Update products_ordered (for bestsellers list)
+      //   Comment out the next line if you don't want free products in the bestseller list
+      tep_db_query("update products set products_ordered = products_ordered + " . sprintf('%d', $free_product['quantity']) . " where products_id = '" . tep_get_prid($free_product['id']) . "'");
+
+      $sql_data_array = array('orders_id' => $insert_id,
+                              'products_id' => $free_product['id'],
+                              'products_model' => $free_product['model'],
+                              'products_name' => $free_product['name'],
+                              'products_price' => 0,
+                              'final_price' => 0,
+                              'products_tax' => '',
+                              'products_quantity' => $free_product['quantity']
+                             );
+      tep_db_perform('orders_products', $sql_data_array);
+
+      $total_weight += ($free_product['quantity'] * $free_product['weight']);
+    }
+// end Get 1 free
+---------------------------------------------------------------------------------------
+
+*********************************************
+Open catalog/shopping_cart.php 
+and find the following code:
+*********************************************
+
+---------------------------------------------------------------------------------------
+<?php
+  if ($messageStack->size('product_action') > 0) {
+    echo $messageStack->output('product_action');
+  }
+?>
+---------------------------------------------------------------------------------------
+
+and replace with:
+
+---------------------------------------------------------------------------------------
+<?php /* // start Get 1 Free
+  if ($messageStack->size('product_action') > 0) {
+    echo $messageStack->output('product_action');
+  }  // end Get 1 Free */
+?>
+---------------------------------------------------------------------------------------
+
+next find this following code:
+
+---------------------------------------------------------------------------------------
+      $products_name .= '<br>' . tep_draw_input_field('cart_quantity[]', $products[$i]['quantity'], 'style="width: 65px;" min="0"', 'number') . tep_draw_hidden_field('products_id[]', $products[$i]['id']) . ' ' . tep_draw_button(CART_BUTTON_UPDATE, 'fa fa-refresh', NULL, NULL, NULL, 'btn-info btn-xs') . ' ' . tep_draw_button(CART_BUTTON_REMOVE, 'fa fa-remove', tep_href_link('shopping_cart.php', 'products_id=' . $products[$i]['id'] . '&action=remove_product'), NULL, NULL, 'btn-danger btn-xs');
+---------------------------------------------------------------------------------------
+
+and replace with:
+
+---------------------------------------------------------------------------------------
+// start Get 1 Free
+    //$products_name .= '<br>' . tep_draw_input_field('cart_quantity[]', $products[$i]['quantity'], 'style="width: 65px;" min="0"', 'number') . tep_draw_hidden_field('products_id[]', $products[$i]['id']) . ' ' . tep_draw_button(CART_BUTTON_UPDATE, 'fa fa-refresh', NULL, NULL, NULL, 'btn-info btn-xs') . ' ' . tep_draw_button(CART_BUTTON_REMOVE, 'fa fa-remove', tep_href_link('shopping_cart.php', 'products_id=' . $products[$i]['id'] . '&action=remove_product'), NULL, NULL, 'btn-danger btn-xs');
+      $products_name .= '<br>' . tep_draw_input_field('cart_quantity[]', $products[$i]['quantity'], 'style="width: 45px;"') . tep_draw_hidden_field('products_id[]', $products[$i]['id']) . tep_draw_hidden_field('free[]', $products[$i]['free']) . ' ' . tep_draw_button(NULL, 'glyphicon glyphicon-refresh', NULL, NULL, NULL, 'btn-info btn-xs') . ' ' . tep_draw_button(NULL, 'glyphicon glyphicon-remove', tep_href_link('shopping_cart.php', 'products_id=' . $products[$i]['id'] . '&action=remove_product'), NULL, NULL, 'btn-danger btn-xs');
+// end Get 1 Free
+---------------------------------------------------------------------------------------
+
+*********************************************
+Open catalog/includes/application_top.php
+and find the following code:
+*********************************************
+
+---------------------------------------------------------------------------------------
+  } else {
+	$attributes = ($_POST['id'][$_POST['products_id'][$i]]) ? $_POST['id'][$_POST['products_id'][$i]] : '';
+	$cart->add_cart($_POST['products_id'][$i], $_POST['cart_quantity'][$i], $attributes, false);                                  
+  }
+                                  
+---------------------------------------------------------------------------------------
+
+and replace that last line with:
+
+---------------------------------------------------------------------------------------
+// Start get 1 free
+ //$cart->add_cart($_POST['products_id'][$i], $_POST['cart_quantity'][$i], $attributes, false);
+	 $isFree = $_POST['free'][$i];
+	if ($isFree != 1) {
+		$cart->add_cart($_POST['products_id'][$i], $_POST['cart_quantity'][$i], $attributes, false);
+	  }
+// End get 1 free
+---------------------------------------------------------------------------------------
+
+Find
+---------------------------------------------------------------------------------------
+// auto expire special products
+  require('includes/functions/specials.php');
+  tep_expire_specials();
+
+---------------------------------------------------------------------------------------
+
+add after
+---------------------------------------------------------------------------------------
+// auto expire get_1_free products
+  require('includes/functions/get_1_free.php');
+  tep_expire_get_1_free();
+
+---------------------------------------------------------------------------------------
+
+*********************************************
+Open catalog/includes/classes/shopping_cart.php
+and find the following code:
+*********************************************
+
+---------------------------------------------------------------------------------------
+    function count_contents() {  // get total number of items in cart
+      $total_items = 0;
+      if (is_array($this->contents)) {
+        reset($this->contents);
+        while (list($products_id, ) = each($this->contents)) {
+          $total_items += $this->get_quantity($products_id);
+---------------------------------------------------------------------------------------
+
+and add the following just after it:
+
+---------------------------------------------------------------------------------------
+// start Get 1 free
+          // If this product qualifies for free product(s) add in the number of free products
+          if (is_array ($free_product = $this->get1free ($products_id))) {
+            $total_items += $free_product['quantity'];
+          }
+// end Get 1 free
+---------------------------------------------------------------------------------------
+
+Now find the following code:
+
+---------------------------------------------------------------------------------------
+    function remove($products_id) {
+      global $customer_id;
+
+      unset($this->contents[$products_id]);
+// remove from database
+      if (tep_session_is_registered('customer_id')) {
+        tep_db_query("delete from " . TABLE_CUSTOMERS_BASKET . " where customers_id = '" . (int)$customer_id . "' and products_id = '" . tep_db_input($products_id) . "'");
+        tep_db_query("delete from " . TABLE_CUSTOMERS_BASKET_ATTRIBUTES . " where customers_id = '" . (int)$customer_id . "' and products_id = '" . tep_db_input($products_id) . "'");
+      }
+---------------------------------------------------------------------------------------
+
+and add the following just after it:
+
+---------------------------------------------------------------------------------------
+// start Get 1 Free
+          // If this product qualifies for free product(s) remove the free products
+          if (is_array ($free_product = $this->get1free ($products_id))) {
+            $pid = (int)$free_product['id'];
+            print '<br>Found Product: ' . $pid;
+            unset($this->contents[$pid]);
+            // remove from database
+            if (tep_session_is_registered('customer_id')) {
+              tep_db_query("delete from customers_basket where customers_id = '" . (int)$customer_id . "' and products_id = '" . tep_db_input($pid) . "'");
+              tep_db_query("delete from customers_basket_attributes where customers_id = '" . (int)$customer_id . "' and products_id = '" . tep_db_input($pid) . "'");
+            }
+          }
+// end Get 1 Free
+---------------------------------------------------------------------------------------
+
+Now find the following code:
+
+---------------------------------------------------------------------------------------
+          $this->total += $currencies->calculate_price($products_price, $products_tax, $qty);
+          $this->weight += ($qty * $products_weight);
+---------------------------------------------------------------------------------------
+
+and add the following just after it:
+
+---------------------------------------------------------------------------------------
+// start Get 1 Free
+          // If this product qualifies for free product(s) add in the total weight of free products
+          if (is_array ($free_product = $this->get1free ($products_id))) {
+            $this->weight += $free_product['quantity'] * $free_product['weight'];
+          }
+// end Get 1 Free
+---------------------------------------------------------------------------------------
+
+Now find the following code:
+
+---------------------------------------------------------------------------------------
+          $products_array[] = array('id' => $products_id,
+                                    'name' => $products['products_name'],
+                                    'model' => $products['products_model'],
+                                    'image' => $products['products_image'],
+                                    'price' => $products_price,
+                                    'quantity' => $this->contents[$products_id]['qty'],
+                                    'weight' => $products['products_weight'],
+                                    'final_price' => ($products_price + $this->attributes_price($products_id)),
+                                    'tax_class_id' => $products['products_tax_class_id'],
+                                    'attributes' => (isset($this->contents[$products_id]['attributes']) ? $this->contents[$products_id]['attributes'] : ''));
+---------------------------------------------------------------------------------------
+
+and add the following just after it:
+
+---------------------------------------------------------------------------------------
+// start Get 1 free
+		  if (is_array ($free_product = $this->get1free ($products_id))) {
+			// Add the free product to the shopping cart (Customer cannot alter this)
+			$products_array[] = array('id' => $free_product['id'],
+									  'name' => $free_product['name'],
+									  'model' => $free_product['model'],
+									  'image' => $free_product['image'],
+									  'price' => 0,
+									  'quantity' => $free_product['quantity'],
+									  'weight' => $free_product['weight'],
+									  'final_price' => 0,
+									  'tax_class_id' => $products['products_tax_class_id'],
+									  'attributes' => '',
+                                      'free' => 1
+									 );
+		  } //if (is_array
+// end Get 1 free
+---------------------------------------------------------------------------------------
+
+Now find the following code:
+
+---------------------------------------------------------------------------------------
+    function unserialize($broken) {
+      for(reset($broken);$kv=each($broken);) {
+        $key=$kv['key'];
+        if (gettype($this->$key)!="user function")
+        $this->$key=$kv['value'];
+      }
+    }
+---------------------------------------------------------------------------------------
+
+and add the following just after it: 
+
+---------------------------------------------------------------------------------------
+// start Get 1 Free
+    function get1free ($products_id) {
+      global $languages_id;
+      $get_1_free_query = tep_db_query("select products_free_id,
+                                               products_free_quantity,
+                                               products_qualify_quantity,
+                                               products_multiple,
+                                               get_1_free_expires_date
+                                        from get_1_free
+                                        where products_id = '" . (int)$products_id . "'
+                                          and status = '1'"
+                                      );
+      if (tep_db_num_rows($get_1_free_query) > 0) {
+        $get_1_free = tep_db_fetch_array($get_1_free_query);
+        //Check that the offer has not expired
+         //MNK bugfix 13.08.2007
+        if (($get_1_free['get_1_free_expires_date'] <= date('Y-m-d H:i:s')) && ($get_1_free['get_1_free_expires_date'] != '0000-00-00 00:00:00')) {
+          //offer has expired, so update the database and return false
+          tep_db_query("update get_1_free
+                        set status = '0',
+                            date_status_change = now()
+                        where products_id = '" . (int)$products_id . "'"
+                      );
+          return false;
+        } else {
+          // Offer is valid, so check if the quantity qualifies
+          $products_quantity = $this->contents[$products_id]['qty'];
+          if ($products_quantity >= $get_1_free['products_qualify_quantity']) {
+            // Qualifies, so get the quantity of free products
+            $free_quantity = 1;
+            if ($get_1_free['products_multiple'] > 1) {
+			// BUG FIX from post number 167
+				// $free_quantity = floor ($products_quantity / $get_1_free['products_qualify_quantity']);
+			    $free_quantity = floor ($products_quantity / $get_1_free['products_qualify_quantity']) * $get_1_free['products_free_quantity'];
+            // EOF BUG FIX from post number 167
+			if ($free_quantity > $get_1_free['products_multiple']) {
+                $free_quantity = $get_1_free['products_multiple'];
+              }
+            }
+            // Get the info on the free product
+            $products_free_query = tep_db_query("select pd.products_name,
+                                                        p.products_model,
+                                                        p.products_image,
+                                                        p.products_weight
+                                                 from products p,
+                                                      products_description pd
+                                                 where p.products_id = '" . (int)$get_1_free['products_free_id'] . "'
+                                                   and pd.products_id = p.products_id
+                                                   and pd.language_id = '" . (int)$languages_id . "'"
+                                               );
+            $products_free = tep_db_fetch_array($products_free_query);
+            // Return an array of free product values
+            $output = array ( 'id' => $get_1_free['products_free_id'],
+							  'quantity' => $free_quantity,
+                              'name' => $products_free['products_name'],
+                              'model' => $products_free['products_model'],
+                              'image' => $products_free['products_image'],
+                              'weight' => $products_free['products_weight']
+                            );
+            return $output;
+          } //if ($products_quantity
+        } //else
+      }//if (tep_db_num_rows
+      // offer was not valid (disabled or expired)
+      return false;
+    }//function
+// end Get 1 Free
+---------------------------------------------------------------------------------------
+
+This text may be modified to suit your needs -- see the use.txt file for hints.
+Now save that file and close it.
+
+That's it for the modifications. You can now go read use.txt to learn how to set
+up a promotion.
+
+
+========
+Support:
+========
+
+Please post any questions on the Addons Support Forum.
+http://forums.oscommerce.com/topic/255288-get-1-free/
